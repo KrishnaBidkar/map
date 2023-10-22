@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get User Info</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.36/moment-timezone-with-data.min.js"></script>
+</head>
+
+<body>
+    <h1>User Information</h1>
+    <div id="user-info">
+        <p><strong>IP Address:</strong> <span id="ip-address"></span></p>
+        <p><strong>Latitude:</strong> <span id="latitude"></span></p>
+        <p><strong>Longitude:</strong> <span id="longitude"></span></p>
+        <p><strong>City:</strong> <span id="city"></span></p>
+        <p><strong>Region:</strong> <span id="region"></span></p>
+        <p><strong>Time Zone:</strong> <span id="time-zone"></span></p>
+        <p><strong>Current Time:</strong> <span id="current-time"></span></p>
+        <div id="map"></div>
+        <h2>Post Offices</h2>
+        <input type="text" id="search" placeholder="Search by name or branch office">
+        <ul id="post-offices"></ul>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $.getJSON("https://api.ipify.org?format=json", function (data) {
+                let ipAddress = data.ip;
+                $("#ip-address").text(ipAddress);
+
+                $.getJSON("https://ipinfo.io/" + ipAddress + "/json", function (geoData) {
+                    let loc = geoData.loc.split(",");
+                    let latitude = loc[0];
+                    let longitude = loc[1];
+
+                    $("#latitude").text(latitude);
+                    $("#longitude").text(longitude);
+                    $("#city").text(geoData.city);
+                    $("#region").text(geoData.region);
+                    $("#time-zone").text(geoData.timezone);
+
+                    let mapUrl = "https://maps.googleapis.com/maps/api/staticmap?center=" + latitude + "," + longitude + "&zoom=14&size=400x300&key=AIzaSyAUiiewGpsfbNSuBb-Jml8V53f38qjQ7hk";
+                    $("#map").html("<img src='" + mapUrl + "'>");
+
+                    let timeZone = geoData.timezone;
+                    let currentTime = moment.tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
+                    $("#current-time").text(currentTime);
+
+                    let pincode = geoData.postal;
+                    $.getJSON("https://api.postalpincode.in/pincode/" + pincode, function (postOfficeData) {
+                        let postOffices = postOfficeData[0].PostOffice;
+                        displayPostOffices(postOffices);
+
+                    
+                        $("#search").on("input", function () {
+                            let searchTerm = $(this).val().toLowerCase();
+                            let filteredPostOffices = postOffices.filter(function (office) {
+                                return office.Name.toLowerCase().includes(searchTerm) || office.BranchType.toLowerCase().includes(searchTerm);
+                            });
+                            displayPostOffices(filteredPostOffices);
+                        });
+                    });
+                });
+            });
+
+            function displayPostOffices(postOffices) {
+                let list = $("#post-offices");
+                list.empty();
+                postOffices.forEach(function (office) {
+                    let listItem = $("<li>").text(office.Name + " - " + office.BranchType);
+                    list.append(listItem);
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
